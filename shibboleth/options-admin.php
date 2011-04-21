@@ -10,6 +10,12 @@ add_action('admin_menu', 'shibboleth_admin_panels');
  **/
 function shibboleth_admin_panels() {
 	// global options page
+
+    // visibility depends on multisite
+    if (! shibboleth_admin_can_access_settings()) {
+        return;
+    }
+
 	if ( function_exists('is_site_admin') ) {
 		$hookname = add_submenu_page('wpmu-admin.php', __('Shibboleth Options', 'shibboleth'), 
 			__('Shibboleth', 'shibboleth'), 8, 'shibboleth-options', 'shibboleth_options_page' );

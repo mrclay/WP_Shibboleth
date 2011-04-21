@@ -189,6 +189,8 @@ add_action('retrieve_password', 'shibboleth_retrieve_password');
 /**
  * If Shibboleth is the default login method, add 'action=shibboleth' to the 
  * WordPress login URL.
+ *
+ * @return string
  */
 function shibboleth_login_url($login_url) {
 	if ( shibboleth_get_option('shibboleth_default_login') ) {
@@ -226,10 +228,8 @@ function shibboleth_session_initiator_url($redirect = null) {
 
 	// first build the target URL.  This is the WordPress URL the user will be returned to after Shibboleth 
 	// is done, and will handle actually logging the user into WordPress using the data provdied by Shibboleth 
-	if ( function_exists('switch_to_blog') ) switch_to_blog($GLOBALS['current_site']->blog_id);
-	$target = site_url('wp-login.php');
-	if ( function_exists('restore_current_blog') ) restore_current_blog();
-
+	$target = get_home_url(null, 'wp-login.php');    
+    
 	$target = add_query_arg('action', 'shibboleth', $target);
 	if ( !empty($redirect) ) {
 		$target = add_query_arg('redirect_to', urlencode($redirect), $target);
@@ -237,7 +237,9 @@ function shibboleth_session_initiator_url($redirect = null) {
 
 	// now build the Shibboleth session initiator URL
 	$initiator_url = shibboleth_get_option('shibboleth_login_url');
-	$initiator_url = add_query_arg('target', urlencode($target), $initiator_url);
+	
+	// fix: http://wordpress.org/support/topic/plugin-shibboleth-over-escaping-the-target-url
+	$initiator_url = add_query_arg('target', $target, $initiator_url);
 
 	$initiator_url = apply_filters('shibboleth_session_initiator_url', $initiator_url);
 
@@ -266,7 +268,11 @@ function shibboleth_authenticate_user() {
 	$user_role = shibboleth_get_user_role();
 
 	if ( empty($user_role) ) {
-		return new WP_Error('no_access', __('You do not have sufficient access.'));
+		if (defined('MULTISITE') && MULTISITE) {
+            return new WP_Error('no_access', __('Please ask your network admin to grant you access.'));
+        } else {
+            return new WP_Error('no_access', __('You do not have sufficient access.'));
+        }
 	}
 
 	$username = $_SERVER[$shib_headers['username']['name']];
@@ -281,6 +287,10 @@ function shibboleth_authenticate_user() {
 
 	// create account if new user
 	if ( !$user->ID ) {
+		if ( !get_option('users_can_register')) {
+		    wp_redirect( site_url('wp-login.php?registration=disabled') );
+		    exit();
+		}
 		$user = shibboleth_create_new_user($username);
 	}
 
@@ -296,19 +306,26 @@ function shibboleth_authenticate_user() {
 	update_usermeta($user->ID, 'shibboleth_account', true);
 	shibboleth_update_user_data($user->ID);
 	if ( shibboleth_get_option('shibboleth_update_roles') ) {
-		$user->set_role($user_role);
-		do_action( 'shibboleth_set_user_roles', $user );
+        if (defined('MULTISITE') && MULTISITE) {
+            // does user belong to this site?
+            if (is_blog_user()) {
+                $user->set_role($user_role);
+                do_action( 'shibboleth_set_user_roles', $user );
+            }
+        } else {
+            $user->set_role($user_role);
+            do_action( 'shibboleth_set_user_roles', $user );
+        }
 	}
 
 	return $user;
 }
 
-
 /**
  * Create a new WordPress user account, and mark it as a Shibboleth account.
  *
  * @param string $user_login login name for the new user
- * @return object WP_User object for newly created user
+ * @return WP_User object for newly created user
  */
 function shibboleth_create_new_user($user_login) {
 	if ( empty($user_login) ) return null;
@@ -351,13 +368,18 @@ function shibboleth_get_user_role() {
 
 		if ( empty($role_header) || empty($role_value) ) continue;
 
-		$values = split(';', $_SERVER[$role_header]);
+         if ( strpos ( $_SERVER[$role_header], ';') === false ) {
+		      /* changed to work with UF Shibb */
+		      $values = preg_split('/[;\\$]/', $_SERVER[$role_header]);         
+         } else {
+		      $values = split(';', $_SERVER[$role_header]);         
+         }
+
 		if ( in_array($role_value, $values) ) {
 			$user_role = $key;
 			break;
 		}
 	}
-
 	$user_role = apply_filters('shibboleth_user_role', $user_role);
 
 	return $user_role;
@@ -367,7 +389,7 @@ function shibboleth_get_user_role() {
 /**
  * Get the user fields that are managed by Shibboleth.
  *
- * @return Array user fields managed by Shibboleth
+ * @return array user fields managed by Shibboleth
  */
 function shibboleth_get_managed_user_fields() {
 	$headers = shibboleth_get_option('shibboleth_headers');
@@ -485,9 +507,29 @@ function shibboleth_add_option($key, $value, $autoload = 'yes') {
 	}
 }
 function shibboleth_update_option($key, $value) {
+	if (! shibboleth_admin_can_access_settings()) {
+		return false;
+	}
 	return function_exists('update_site_option') ? update_site_option($key, $value) : update_option($key, $value);
 }
 function shibboleth_delete_option($key) {
+	if (! shibboleth_admin_can_access_settings()) {
+		return false;
+	}
 	return function_exists('delete_site_option') ? delete_site_option($key) : delete_option($key);
+}
+
+/**
+ * Assuming the user is an admin, does (s)he have permission to update Shibboleth site
+ * settings? (On MULTISITE, you have to be a super admin)
+ *
+ * @return bool
+ */
+function shibboleth_admin_can_access_settings()
+{
+	if (defined('MULTISITE') && MULTISITE && ! is_super_admin()) {
+		return false;
+	}
+	return true;
 }
 
