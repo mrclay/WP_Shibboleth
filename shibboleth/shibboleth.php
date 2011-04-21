@@ -25,7 +25,9 @@ if ($shibboleth_plugin_revision === false || SHIBBOLETH_PLUGIN_REVISION != $shib
  * WordPress's .htaccess file.
  */
 function shibboleth_activate_plugin() {
-	if ( function_exists('switch_to_blog') ) switch_to_blog($GLOBALS['current_site']->blog_id);
+	if ( function_exists('switch_to_blog') ) {
+        switch_to_blog($GLOBALS['current_site']->blog_id);
+    }
 
 	shibboleth_add_option('shibboleth_login_url', get_option('home') . '/Shibboleth.sso/Login');
 	shibboleth_add_option('shibboleth_default_login', false);
@@ -63,7 +65,9 @@ function shibboleth_activate_plugin() {
 
 	shibboleth_update_option('shibboleth_plugin_revision', SHIBBOLETH_PLUGIN_REVISION);
 
-	if ( function_exists('restore_current_blog') ) restore_current_blog();
+	if ( function_exists('restore_current_blog') ) {
+        restore_current_blog();
+    }
 }
 register_activation_hook('shibboleth/shibboleth.php', 'shibboleth_activate_plugin');
 
@@ -280,7 +284,7 @@ function shibboleth_authenticate_user() {
 
 	if ( $user->ID ) {
 		if ( !get_usermeta($user->ID, 'shibboleth_account') ) {
-			// TODO: what happens if non-shibboleth account by this name already exists?
+			// @todo what happens if non-shibboleth account by this name already exists?
 			//return new WP_Error('invalid_username', __('Account already exists by this name.'));
 		}
 	}
@@ -328,7 +332,9 @@ function shibboleth_authenticate_user() {
  * @return WP_User object for newly created user
  */
 function shibboleth_create_new_user($user_login) {
-	if ( empty($user_login) ) return null;
+	if ( empty($user_login) ) {
+        return null;
+    }
 
 	// create account and flag as a shibboleth acount
 	require_once( ABSPATH . WPINC . '/registration.php' );
@@ -357,7 +363,9 @@ function shibboleth_create_new_user($user_login) {
  */
 function shibboleth_get_user_role() {
 	global $wp_roles;
-	if ( !$wp_roles ) $wp_roles = new WP_Roles();
+	if ( !$wp_roles ) {
+        $wp_roles = new WP_Roles();
+    }
 
 	$shib_roles = apply_filters('shibboleth_roles', shibboleth_get_option('shibboleth_roles'));
 	$user_role = $shib_roles['default'];
@@ -368,12 +376,7 @@ function shibboleth_get_user_role() {
 
 		if ( empty($role_header) || empty($role_value) ) continue;
 
-         if ( strpos ( $_SERVER[$role_header], ';') === false ) {
-		      /* changed to work with UF Shibb */
-		      $values = preg_split('/[;\\$]/', $_SERVER[$role_header]);         
-         } else {
-		      $values = split(';', $_SERVER[$role_header]);         
-         }
+		$values = preg_split('/[;\\$]/', $_SERVER[$role_header]);
 
 		if ( in_array($role_value, $values) ) {
 			$user_role = $key;
