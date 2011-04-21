@@ -2,7 +2,7 @@ This is a temporary fork of the official WordPress [Shibboleth plugin](http://wo
 
 It has several fixes for Multisite users stemming from the fact that it stores its plugin settings globally rather that at the site level.
 
-See [shibboleth/readme.txt](blob/master/shibboleth/readme.txt) for more details.
+See [shibboleth/readme.txt](WP_Shibboleth/blob/master/shibboleth/readme.txt) for more details.
 
 ### How different is it?
 
