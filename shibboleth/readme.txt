@@ -1,12 +1,15 @@
 === Shibboleth ===
-Contributors: willnorris, mitchoyoshitaka
+Contributors: willnorris, mitchoyoshitaka, mr7clay
 Tags: shibboleth, authentication, login, saml
 Requires at least: 2.8
-Tested up to: 3.0.1
+Tested up to: 3.1.1
 Stable tag: 1.4
 
 Allows WordPress to externalize user authentication and account creation to a
 Shibboleth Service Provider.
+
+Note: This is a temporary fork of the official Shibboleth plugin available at
+http://wordpress.org/extend/plugins/shibboleth/
 
 == Description ==
 
@@ -50,16 +53,14 @@ Upload the `shibboleth` folder to your WordPress plugins folder (probably
 `/wp-content/plugins`), and activate it through the WordPress admin panel.
 Configure it from the Shibboleth settings page.
 
-= For WordPress MU =
+= For Multisite =
 
-Shibboleth works equally well with WordPress MU using either vhosts or folders
-for blogs.  Upload the `shibboleth` folder to your `mu-plugins` folder
-(probably `/wp-content/mu-plugins`).  Move the file `shibboleth-mu.php` from
-the `shibboleth` folder up one directory so that it is in `mu-plugins`
-alongside the `shibboleth` folder.  No need to activate it, just configure it
-from the Shibboleth settings page, found under "Site Admin".
-
-[properly installed]: https://spaces.internet2.edu/display/SHIB2/Installation
+Shibboleth works, but there is a big limitation in that the settings are
+network-wide. This has several implications: 1) only "super" network admins can 
+access/change Shibboleth settings. 2) the plugin will only assign roles if the 
+user has already been added to the site (e.g. by an admin). 3) in any site the
+user has been added to, shibboleth will assign her that role (if your an editor,
+you'll be an editor in every site you're added it).
 
 == Frequently Asked Questions ==
 
@@ -103,6 +104,10 @@ have to make that call as to what is most appropriate.
 3. Assign users into WordPress roles based on arbitrary data provided by Shibboleth
 
 == Changelog ==
+
+= github version (2011-04-21) =
+ - more sane Multisite handling
+ - fix for multisite logins
 
 = version 1.4 (2010-08-30) =
  - tested for compatibility with WordPress 3.0
